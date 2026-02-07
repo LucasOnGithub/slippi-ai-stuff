@@ -113,30 +113,42 @@ if not defined AGENT_INPUT (
  for /f "tokens=* delims=" %%I in ("!AGENT_INPUT!") do set "AGENT_INPUT=%%I"
 
  set "AGENT_PATH="
- call :TRY_RESOLVE_AGENT "!AGENT_INPUT!"
+ set "RAW_INPUT=!AGENT_INPUT!"
+ call :TRY_RESOLVE_AGENT "!RAW_INPUT!"
 
  set "IS_ABSOLUTE="
- if /I "!AGENT_INPUT:~1,1!"==":" set "IS_ABSOLUTE=1"
- if "!AGENT_INPUT:~0,2!"=="\\" set "IS_ABSOLUTE=1"
+ if /I "!RAW_INPUT:~1,1!"==":" set "IS_ABSOLUTE=1"
+ if "!RAW_INPUT:~0,2!"=="\\" set "IS_ABSOLUTE=1"
 
  if not defined AGENT_PATH if not defined IS_ABSOLUTE (
-    call :TRY_RESOLVE_AGENT "!ROOT_DIR!!AGENT_INPUT!"
+    call :TRY_RESOLVE_AGENT "!ROOT_DIR!!RAW_INPUT!"
  )
 
  if not defined AGENT_PATH if not defined IS_ABSOLUTE (
-    call :FIND_AGENT_BY_NAME "!AGENT_INPUT!"
+    call :FIND_AGENT_BY_NAME "!RAW_INPUT!"
  )
 
  if not defined AGENT_PATH (
-    echo Could not find "!AGENT_INPUT!". Ensure the file exists or provide a full path.
-    if not defined IS_ABSOLUTE (
-        echo Checked:
-        echo     !AGENT_INPUT!
-        echo     !ROOT_DIR!!AGENT_INPUT!
+    if defined IS_ABSOLUTE (
+        set "RAW_CANDIDATE=!RAW_INPUT!"
     ) else (
-        echo Checked: !AGENT_INPUT!
+        set "RAW_CANDIDATE=!ROOT_DIR!!RAW_INPUT!"
     )
-    goto :ASK_AGENT_LOOP
+    echo Could not automatically find "!RAW_INPUT!".
+    echo I tried:
+    if defined IS_ABSOLUTE (
+        echo     !RAW_INPUT!
+    ) else (
+        echo     !RAW_INPUT!
+        echo     !ROOT_DIR!!RAW_INPUT!
+    )
+    set /p USE_RAW=Use "!RAW_CANDIDATE!" anyway? (y/n): 
+    if /I "!USE_RAW!"=="y" (
+        set "AGENT_PATH=!RAW_CANDIDATE!"
+    ) else (
+        echo Let's try entering the path again.
+        goto :ASK_AGENT_LOOP
+    )
  )
  echo Using agent for P!PORT!: !AGENT_PATH!
 if "!PORT!"=="1" (
