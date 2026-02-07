@@ -110,13 +110,13 @@ if not defined AGENT_INPUT (
 )
 set "AGENT_PATH="
 for %%P in ("!AGENT_INPUT!") do (
-    if exist %%~fP (
+    if exist "%%~fP" (
         set "AGENT_PATH=%%~fP"
     )
 )
 if not defined AGENT_PATH (
     for %%P in ("!ROOT_DIR!!AGENT_INPUT!") do (
-        if exist %%~fP (
+        if exist "%%~fP" (
             set "AGENT_PATH=%%~fP"
         )
     )
