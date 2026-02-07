@@ -105,31 +105,69 @@ echo Examples: medium-v2
 set "AGENT_INPUT="
 set /p AGENT_INPUT=Agent path or name for P!PORT!: 
 if not defined AGENT_INPUT (
-    echo Please provide a value (e.g., medium-v2).
+    echo Please provide a value (e.g., medium-v2)
     goto :ASK_AGENT_LOOP
 )
-set "AGENT_PATH="
-for %%P in ("!AGENT_INPUT!") do (
-    if exist "%%~fP" (
-        set "AGENT_PATH=%%~fP"
+ set "AGENT_INPUT=!AGENT_INPUT:"=!"
+ set "AGENT_INPUT=!AGENT_INPUT:'=!"
+ for /f "tokens=* delims=" %%I in ("!AGENT_INPUT!") do set "AGENT_INPUT=%%I"
+
+ set "AGENT_PATH="
+ call :TRY_RESOLVE_AGENT "!AGENT_INPUT!"
+
+ set "IS_ABSOLUTE="
+ if /I "!AGENT_INPUT:~1,1!"==":" set "IS_ABSOLUTE=1"
+ if "!AGENT_INPUT:~0,2!"=="\\" set "IS_ABSOLUTE=1"
+
+ if not defined AGENT_PATH if not defined IS_ABSOLUTE (
+    call :TRY_RESOLVE_AGENT "!ROOT_DIR!!AGENT_INPUT!"
+ )
+
+ if not defined AGENT_PATH if not defined IS_ABSOLUTE (
+    call :FIND_AGENT_BY_NAME "!AGENT_INPUT!"
+ )
+
+ if not defined AGENT_PATH (
+    echo Could not find "!AGENT_INPUT!". Ensure the file exists or provide a full path.
+    if not defined IS_ABSOLUTE (
+        echo Checked:
+        echo     !AGENT_INPUT!
+        echo     !ROOT_DIR!!AGENT_INPUT!
+    ) else (
+        echo Checked: !AGENT_INPUT!
     )
-)
-if not defined AGENT_PATH (
-    for %%P in ("!ROOT_DIR!!AGENT_INPUT!") do (
-        if exist "%%~fP" (
-            set "AGENT_PATH=%%~fP"
-        )
-    )
-)
-if not defined AGENT_PATH (
-    echo Could not find "!AGENT_INPUT!". Ensure the file exists or is placed in the project root.
     goto :ASK_AGENT_LOOP
-)
+ )
+ echo Using agent for P!PORT!: !AGENT_PATH!
 if "!PORT!"=="1" (
     set "P1_AGENT=!AGENT_PATH!"
 ) else (
     set "P2_AGENT=!AGENT_PATH!"
 )
+exit /b 0
+
+:TRY_RESOLVE_AGENT
+set "CANDIDATE=%~1"
+if not defined CANDIDATE (
+    exit /b 0
+)
+if exist "%CANDIDATE%" (
+    for %%R in ("%CANDIDATE%") do set "AGENT_PATH=%%~fR"
+)
+exit /b 0
+
+:FIND_AGENT_BY_NAME
+set "SEARCH_NAME=%~1"
+if not defined SEARCH_NAME (
+    exit /b 0
+)
+for /f "delims=" %%F in ('dir /b /s "!ROOT_DIR!*!SEARCH_NAME!*" 2^>nul') do (
+    if /I "%%~nxF"=="!SEARCH_NAME!" (
+        set "AGENT_PATH=%%~fF"
+        goto :FIND_AGENT_BY_NAME_DONE
+    )
+)
+:FIND_AGENT_BY_NAME_DONE
 exit /b 0
 
 :PROMPT_COPY_HOME
